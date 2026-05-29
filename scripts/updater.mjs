@@ -64,20 +64,42 @@ async function resolveUpdater() {
   );
   console.log();
 
+  let stableUploaded = false;
+  let alphaUploaded = false;
+
   // Process stable release
   if (stableTag) {
-    await processRelease(github, options, stableTag, false);
+    stableUploaded = await processRelease(github, options, stableTag, false);
+  } else {
+    console.error(
+      "[Error] No stable tag (vX.Y.Z) found. Create a release tag first.",
+    );
   }
 
   // Process pre-release if found
   if (preReleaseTag) {
-    await processRelease(github, options, preReleaseTag, true);
+    alphaUploaded = await processRelease(github, options, preReleaseTag, true);
+  }
+
+  if (!stableUploaded) {
+    console.error(
+      "[Error] update.json was NOT uploaded. Ensure GitHub Release exists for the stable tag " +
+        `(e.g. v2.4.7) with signed installer assets, then re-run Updater CI. ` +
+        `Stable tag: ${stableTag ? stableTag.name : "none"}`,
+    );
+    process.exitCode = 1;
+  }
+
+  if (preReleaseTag && !alphaUploaded) {
+    console.warn(
+      "[Warn] Alpha updater JSON was not uploaded (pre-release channel).",
+    );
   }
 }
 
 // Process a release (stable or alpha) and generate update files
 async function processRelease(github, options, tag, isAlpha) {
-  if (!tag) return;
+  if (!tag) return false;
 
   try {
     const { data: release } = await github.rest.repos.getReleaseByTag({
@@ -293,21 +315,26 @@ async function processRelease(github, options, tag, isAlpha) {
       console.log(
         `Successfully uploaded ${isAlpha ? "alpha" : "stable"} update files to ${releaseTag}`,
       );
+      return true;
     } catch (error) {
       console.error(
         `Failed to process ${isAlpha ? "alpha" : "stable"} release:`,
         error.message,
       );
+      return false;
     }
   } catch (error) {
     if (error.status === 404) {
-      console.log(`Release not found for tag: ${tag.name}, skipping...`);
+      console.error(
+        `Release not found for tag: ${tag.name}. Run Release Build first (tag must publish installers).`,
+      );
     } else {
       console.error(
         `Failed to get release for tag: ${tag.name}`,
         error.message,
       );
     }
+    return false;
   }
 }
 

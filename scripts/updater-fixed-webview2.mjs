@@ -24,15 +24,35 @@ async function resolveUpdater() {
   });
 
   // get the latest publish tag
-  const tag = tags.find((t) => t.name.startsWith("v"));
+  const tag = tags.find((t) => /^v\d+\.\d+\.\d+$/.test(t.name));
+
+  if (!tag) {
+    console.error("[Error] No stable tag vX.Y.Z found.");
+    process.exitCode = 1;
+    return;
+  }
 
   console.log(tag);
   console.log();
 
-  const { data: latestRelease } = await github.rest.repos.getReleaseByTag({
-    ...options,
-    tag: tag.name,
-  });
+  let latestRelease;
+  try {
+    const response = await github.rest.repos.getReleaseByTag({
+      ...options,
+      tag: tag.name,
+    });
+    latestRelease = response.data;
+  } catch (error) {
+    if (error.status === 404) {
+      console.error(
+        `[Error] GitHub Release for ${tag.name} not found. Run Release Build first.`,
+      );
+    } else {
+      console.error(`[Error] ${error.message}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
 
   const updateData = {
     name: tag.name,
