@@ -371,7 +371,7 @@ export const ProfileItem = (props: Props) => {
   });
 
   type ContextMenuItem = {
-    label: string;
+    label: TranslationKey;
     handler: () => void;
     disabled: boolean;
   };
