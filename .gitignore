@@ -13,3 +13,7 @@ scripts/_env.sh
 .eslintcache
 .changelog_backups
 target
+
+# Tauri updater signing keys (never commit private key)
+src-tauri/clashwin.key
+src-tauri/clashwin.key.pub

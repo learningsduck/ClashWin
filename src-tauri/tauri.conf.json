@@ -1,9 +1,9 @@
 {
-  "version": "2.4.6",
+  "version": "2.4.7",
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "bundle": {
     "active": true,
-    "longDescription": "Clash Verge Rev",
+    "longDescription": "ClashWin",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -12,11 +12,11 @@
       "icons/icon.ico"
     ],
     "resources": ["resources"],
-    "publisher": "Clash Verge Rev",
+    "publisher": "ClashWin",
     "externalBin": ["sidecar/verge-mihomo", "sidecar/verge-mihomo-alpha"],
     "copyright": "GNU General Public License v3.0",
     "category": "DeveloperTool",
-    "shortDescription": "Clash Verge Rev",
+    "shortDescription": "ClashWin",
     "createUpdaterArtifacts": true
   },
   "build": {
@@ -26,15 +26,14 @@
     "devUrl": "http://localhost:3333/",
     "removeUnusedCommands": true
   },
-  "productName": "Clash Verge",
-  "identifier": "io.github.clash-verge-rev.clash-verge-rev",
+  "productName": "ClashWin",
+  "identifier": "io.github.clash-Win-rev.clash-Win-rev",
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQyOEMyRjBCQkVGOUJEREYKUldUZnZmbStDeStNMHU5Mmo1N24xQXZwSVRYbXA2NUpzZE5oVzlqeS9Bc0t6RVV4MmtwVjBZaHgK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkzRkNCOTY4MzU2NDlGMDUKUldRRm4yUTFhTG44azlCaDBXejdOdyt4YjFOZGEwcmdpUE5KQVVxaE1kNHZqd0VvUE40QStXT2kK",
       "endpoints": [
-        "https://download.clashverge.dev/https://github.com/clash-verge-rev/clash-verge-rev/releases/download/updater/update-proxy.json",
-        "https://gh-proxy.com/https://github.com/clash-verge-rev/clash-verge-rev/releases/download/updater/update-proxy.json",
-        "https://github.com/clash-verge-rev/clash-verge-rev/releases/download/updater/update.json"
+        "https://github.com/learningsduck/ClashWin/releases/download/updater/update.json",
+        "https://gh-proxy.com/https://github.com/learningsduck/ClashWin/releases/download/updater/update.json"
       ],
       "windows": {
         "installMode": "basicUi"

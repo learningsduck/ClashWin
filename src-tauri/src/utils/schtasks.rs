@@ -9,8 +9,8 @@ use winapi::um::stringapiset::MultiByteToWideChar;
 use winapi::um::winnls::{GetACP, GetOEMCP};
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
-const TASK_NAME_USER: &str = "Clash Verge";
-const TASK_NAME_ADMIN: &str = "Clash Verge (Admin)";
+const TASK_NAME_USER: &str = "ClashWin";
+const TASK_NAME_ADMIN: &str = "ClashWin (Admin)";
 const TASK_XML_DIR: &str = "tasks";
 const TASK_XML_USER: &str = "clash-verge-task-user.xml";
 const TASK_XML_ADMIN: &str = "clash-verge-task-admin.xml";
@@ -99,7 +99,7 @@ fn get_startup_dir() -> Result<PathBuf> {
 async fn cleanup_legacy_shortcuts() -> Result<()> {
     let startup_dir = get_startup_dir()?;
     let old_shortcut = startup_dir.join("Clash-Verge.lnk");
-    let new_shortcut = startup_dir.join("Clash Verge.lnk");
+    let new_shortcut = startup_dir.join("ClashWin.lnk");
 
     old_shortcut.remove_if_exists().await?;
     new_shortcut.remove_if_exists().await?;
