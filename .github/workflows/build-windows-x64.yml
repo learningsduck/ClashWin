@@ -73,9 +73,23 @@ jobs:
       - name: Collect artifacts
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist-artifacts
-          BUNDLE="src-tauri/target/${TARGET}/release/bundle"
-          find "$BUNDLE" -type f \( -name "*.exe" -o -name "*.msi" \) -exec cp -v {} dist-artifacts/ \;
+          FOUND=0
+          for BUNDLE in \
+            "target/${TARGET}/release/bundle" \
+            "src-tauri/target/${TARGET}/release/bundle"; do
+            if [ -d "$BUNDLE" ]; then
+              echo "Collecting from $BUNDLE"
+              find "$BUNDLE" -type f \( -name "*.exe" -o -name "*.msi" \) -exec cp -v {} dist-artifacts/ \;
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "Bundle directory not found. Listing target dirs:"
+            find . -path '*/release/bundle/*' -type f \( -name '*.exe' -o -name '*.msi' \) 2>/dev/null || true
+            exit 1
+          fi
           ls -la dist-artifacts/
 
       - name: Upload workflow artifacts
