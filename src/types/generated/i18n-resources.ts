@@ -16,6 +16,7 @@ export interface TranslationResources {
           "sendCode": string;
         };
         "adminHint": string;
+        "currentApi": string;
         "fields": {
           "account": string;
           "adminUser": string;

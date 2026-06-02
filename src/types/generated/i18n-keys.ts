@@ -22,6 +22,7 @@ export const translationKeys = [
   "auth.login.actions.adminLogin",
   "auth.login.actions.backToUserLogin",
   "auth.login.actions.clearSavedLogin",
+  "auth.login.currentApi",
   "auth.login.rememberCredentials",
   "auth.login.hint",
   "auth.login.hintPassword",
