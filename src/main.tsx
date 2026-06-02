@@ -27,6 +27,7 @@ import {
   ThemeModeProvider,
   UpdateStateProvider,
 } from "./services/states";
+import { initAuthEndpoints } from "./services/auth-endpoints";
 import { disableWebViewShortcuts } from "./utils/disable-webview-shortcuts";
 import {
   isIgnoredMonacoWorkerError,
@@ -85,6 +86,9 @@ const initializeApp = (initialThemeMode: "light" | "dark") => {
 const BOOTSTRAP_TIMEOUT_MS = 8000;
 
 const bootstrap = async () => {
+  await initAuthEndpoints().catch((err) => {
+    console.warn("[main.tsx] initAuthEndpoints failed:", err);
+  });
   const { initialThemeMode } = await preloadAppData();
   initializeApp(initialThemeMode);
 };

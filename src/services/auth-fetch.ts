@@ -1,60 +1,46 @@
-import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
-interface AuthHttpResponse {
-  status: number;
-  body: string;
-}
-
-function isTauriRuntime(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
-function headersToRecord(headers?: HeadersInit): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!headers) return out;
-  if (headers instanceof Headers) {
-    headers.forEach((value, key) => {
-      out[key] = value;
-    });
-    return out;
-  }
-  if (Array.isArray(headers)) {
-    for (const [key, value] of headers) {
-      out[key] = value;
-    }
-    return out;
-  }
-  return { ...headers };
-}
+import {
+  getOrderedAuthBases,
+  isNetworkError,
+  rewriteAuthUrl,
+  setActiveAuthBase,
+  shouldFailoverResponse,
+} from "./auth-endpoints";
+import { performAuthHttp } from "./auth-http";
 
 /**
- * 认证 API 专用 fetch：桌面端走 Rust 直连（绕过系统/Clash 代理），避免 127.0.0.1 连不上。
+ * 认证 API 请求：当前线路失败时自动尝试 backups 中的其他 API 地址。
  */
 export async function authFetch(url: string, init?: RequestInit): Promise<Response> {
-  if (!isTauriRuntime()) {
-    return globalThis.fetch(url, init);
+  const bases = getOrderedAuthBases();
+  if (!bases.length) {
+    return performAuthHttp(url, init);
   }
 
-  const method = (init?.method ?? "GET").toUpperCase();
-  let body: string | undefined;
-  if (typeof init?.body === "string") {
-    body = init.body;
-  } else if (init?.body != null) {
-    body = JSON.stringify(init.body);
+  let lastResponse: Response | null = null;
+  let lastError: unknown;
+
+  for (const base of bases) {
+    const targetUrl = rewriteAuthUrl(url, base);
+    try {
+      const response = await performAuthHttp(targetUrl, init);
+      if (shouldFailoverResponse(response)) {
+        lastResponse = response;
+        continue;
+      }
+      setActiveAuthBase(base);
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (!isNetworkError(error)) {
+        throw error;
+      }
+    }
   }
 
-  const result = await invoke<AuthHttpResponse>("auth_http_fetch", {
-    method,
-    url,
-    headers: headersToRecord(init?.headers),
-    body: body ?? null,
-  });
-
-  return new Response(result.body, {
-    status: result.status,
-    headers: { "Content-Type": "application/json" },
-  });
+  if (lastResponse) return lastResponse;
+  throw lastError ?? new TypeError("无法连接认证 API，请检查网络或稍后重试");
 }
 
 /** 非认证请求仍可用 Tauri fetch（保持原行为） */
