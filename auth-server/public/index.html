@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clash Verge 管理后台</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { background: #1976d2; color: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .card h2 { margin-bottom: 15px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .form-group input:focus { outline: none; border-color: #1976d2; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+    .btn-primary { background: #1976d2; color: white; }
+    .btn-primary:hover { background: #1565c0; }
+    .btn-danger { background: #d32f2f; color: white; }
+    .btn-danger:hover { background: #c62828; }
+    .btn-success { background: #388e3c; color: white; }
+    .btn-success:hover { background: #2e7d32; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f9f9f9; font-weight: 600; }
+    tr:hover { background: #f5f5f5; }
+    .status-active { color: #388e3c; font-weight: 500; }
+    .status-expired { color: #d32f2f; font-weight: 500; }
+    .status-none { color: #757575; }
+    .hidden { display: none !important; }
+    .alert { padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+    .alert-success { background: #e8f5e9; color: #2e7d32; }
+    .alert-error { background: #ffebee; color: #c62828; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 30px; border-radius: 8px; min-width: 400px; max-width: 500px; }
+    .modal-content.modal-wide { max-width: 640px; max-height: 90vh; overflow-y: auto; }
+    .modal-content h3 { margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .stat-card .number { font-size: 32px; font-weight: bold; color: #1976d2; }
+    .stat-card .label { color: #666; margin-top: 5px; }
+    .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+    .search-bar input { flex: 1; min-width: 200px; }
+    .form-hint { font-size: 12px; color: #888; margin-top: 4px; }
+    .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .url-ellipsis { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+    .section-desc { font-size: 13px; color: #666; margin: -8px 0 16px 0; line-height: 1.5; }
+    .pool-tree { display: flex; flex-direction: column; gap: 10px; }
+    .pool-year-group, .pool-month-group, .pool-half-group {
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      background: #fafafa;
+      overflow: hidden;
+    }
+    .pool-year-body { padding: 4px 0 8px; }
+    .pool-month-group { margin: 8px 12px 0; background: #f3f7fb; }
+    .pool-half-group { margin: 8px 12px 12px; background: #fff; }
+    .pool-year-group > summary,
+    .pool-month-group > summary,
+    .pool-half-group > summary {
+      cursor: pointer;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: #333;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .pool-year-group > summary { background: #dce9f8; font-size: 16px; }
+    .pool-month-group > summary { background: #eef4fc; font-size: 15px; }
+    .pool-half-group > summary { font-size: 14px; padding: 10px 14px; background: #f5f5f5; }
+    .pool-year-group > summary::-webkit-details-marker,
+    .pool-month-group > summary::-webkit-details-marker,
+    .pool-half-group > summary::-webkit-details-marker { display: none; }
+    .pool-year-group > summary::before,
+    .pool-month-group > summary::before,
+    .pool-half-group > summary::before {
+      content: '▸';
+      margin-right: 8px;
+      color: #1976d2;
+      transition: transform 0.15s;
+    }
+    .pool-year-group[open] > summary::before,
+    .pool-month-group[open] > summary::before,
+    .pool-half-group[open] > summary::before { transform: rotate(90deg); }
+    .pool-count-badge {
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      background: #e0e0e0;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .pool-table-wrap { overflow-x: auto; }
+    .pool-table-wrap table { margin: 0; }
+    .pool-table-wrap .pool-empty-half {
+      padding: 16px;
+      text-align: center;
+      color: #999;
+      font-size: 13px;
+    }
+    .pool-tree-empty {
+      padding: 32px;
+      text-align: center;
+      color: #999;
+      border: 1px dashed #ddd;
+      border-radius: 8px;
+    }
+    .pool-picker-panel {
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fafafa;
+    }
+    .pool-picker-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
+    .pool-picker-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .pool-picker-item:hover { border-color: #1976d2; background: #f5f9ff; }
+    .pool-picker-item.selected {
+      border-color: #1976d2;
+      background: #e3f2fd;
+      box-shadow: 0 0 0 1px #1976d2;
+    }
+    .pool-picker-item .pool-picker-meta { font-size: 12px; color: #666; }
+    .pool-recent-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .pool-recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 13px;
+    }
+    .pool-recent-item button { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
+    .pool-assign-selected {
+      padding: 10px 12px;
+      background: #e8f5e9;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      color: #2e7d32;
+    }
+    .pool-assign-selected.empty { background: #f5f5f5; color: #888; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="login-page" class="container">
+      <div style="max-width: 400px; margin: 100px auto;">
+        <div class="card">
+          <h2>管理员登录</h2>
+          <div id="login-error" class="alert alert-error hidden"></div>
+          <form id="login-form">
+            <div class="form-group">
+              <label>用户名</label>
+              <input type="text" id="login-username" required>
+            </div>
+            <div class="form-group">
+              <label>密码</label>
+              <input type="password" id="login-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">登录</button>
+          </form>
+          <hr style="margin: 20px 0;">
+          <details>
+            <summary style="cursor: pointer; color: #666;">首次使用？初始化管理员账户</summary>
+            <form id="init-form" style="margin-top: 15px;">
+              <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="init-username" required>
+              </div>
+              <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="init-password" required>
+              </div>
+              <div class="form-group">
+                <label>初始化密钥</label>
+                <input type="text" id="init-secret" placeholder="clash-verge-admin-init-2024">
+              </div>
+              <button type="submit" class="btn btn-success" style="width: 100%;">创建管理员</button>
+            </form>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashboard-page" class="container hidden">
+      <div class="header">
+        <h1>Clash Verge 管理后台</h1>
+        <div>
+          <span id="admin-username" style="margin-right: 15px;"></span>
+          <button class="btn btn-danger" onclick="logout()">退出</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="number" id="stat-total-users">0</div>
+          <div class="label">总用户数</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-active-users">0</div>
+          <div class="label">活跃会员</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-expired-users">0</div>
+          <div class="label">已过期</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-pool-count">0</div>
+          <div class="label">订阅汇总</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>订阅汇总</h2>
+        <p class="section-desc">在此维护可复用的订阅套餐（备注名称、主/备用链接、到期日）。分配给用户时会写入订阅链接，并将该用户的会员到期日设为套餐到期日。</p>
+        <div class="search-bar">
+          <button class="btn btn-success" onclick="openPoolModal()">+ 添加订阅</button>
+          <button class="btn btn-primary" onclick="loadSubscriptionPool()">刷新</button>
+          <button class="btn" type="button" onclick="toggleAllPoolGroups(true)">全部展开</button>
+          <button class="btn" type="button" onclick="toggleAllPoolGroups(false)">全部收起</button>
+        </div>
+        <div id="pool-groups" class="pool-tree"></div>
+      </div>
+
+      <div class="card">
+        <h2>用户管理</h2>
+        <div class="search-bar">
+          <input type="text" id="search-phone" placeholder="搜索手机号 / 邮箱 / ID...">
+          <button class="btn btn-primary" onclick="loadUsers()">搜索</button>
+          <button class="btn" onclick="document.getElementById('search-phone').value='';loadUsers()">清空</button>
+          <button class="btn btn-success" onclick="openAddUserModal()">+ 添加用户</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>手机号</th>
+              <th>邮箱</th>
+              <th>账户</th>
+              <th>订阅链接</th>
+              <th>会员状态</th>
+              <th>到期时间</th>
+              <th>剩余天数</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="users-table"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>充值记录</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>用户</th>
+              <th>操作管理员</th>
+              <th>充值天数</th>
+              <th>金额</th>
+              <th>备注</th>
+              <th>时间</th>
+            </tr>
+          </thead>
+          <tbody id="logs-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="pool-modal" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <h3 id="pool-modal-title">添加订阅</h3>
+        <input type="hidden" id="pool-edit-id" value="">
+        <div class="form-group">
+          <label>备注名称 <span style="color:#d32f2f">*</span></label>
+          <input type="text" id="pool-name" placeholder="如：月卡香港、备用线路 A">
+        </div>
+        <div class="form-group">
+          <label>到期日 <span style="color:#d32f2f">*</span></label>
+          <input type="date" id="pool-expire-date">
+          <p class="form-hint">分配给用户时，会员到期日将设为此日 23:59:59（以该时间为准，不叠加原到期日）</p>
+        </div>
+        <div class="form-group">
+          <label>主订阅链接 <span style="color:#d32f2f">*</span></label>
+          <input type="text" id="pool-url" placeholder="https://example.com/subscribe/xxx">
+        </div>
+        <p class="form-hint" style="margin-bottom: 10px;">备用链接（最多 5 条）</p>
+        <div class="form-group"><label>备用 1</label><input type="text" class="pool-backup-input" data-index="0" placeholder="选填"></div>
+        <div class="form-group"><label>备用 2</label><input type="text" class="pool-backup-input" data-index="1" placeholder="选填"></div>
+        <div class="form-group"><label>备用 3</label><input type="text" class="pool-backup-input" data-index="2" placeholder="选填"></div>
+        <div class="form-group"><label>备用 4</label><input type="text" class="pool-backup-input" data-index="3" placeholder="选填"></div>
+        <div class="form-group"><label>备用 5</label><input type="text" class="pool-backup-input" data-index="4" placeholder="选填"></div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closePoolModal()">取消</button>
+          <button class="btn btn-success" onclick="savePoolItem()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pool-assign-modal" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <h3>分配套餐</h3>
+        <div class="form-group">
+          <label>目标用户</label>
+          <input type="text" id="pool-assign-user-label" readonly placeholder="在用户列表点击「分配套餐」自动填入">
+        </div>
+        <div class="form-group">
+          <label>用户 ID <span style="color:#d32f2f">*</span></label>
+          <input type="number" id="pool-assign-user-id" min="1" placeholder="在用户列表第一列查看 ID">
+        </div>
+        <div class="form-group">
+          <label>最近分配（最多 10 种不同订阅，点击选用）</label>
+          <div id="pool-recent-assigns" class="pool-recent-list"></div>
+        </div>
+        <div id="pool-assign-selected" class="pool-assign-selected empty">请从下方分级列表或最近分配中选择套餐</div>
+        <div class="form-group">
+          <label>选择套餐（年 → 月 → 上/下半月）</label>
+          <div id="pool-assign-picker" class="pool-picker-panel pool-tree"></div>
+        </div>
+        <p class="form-hint">将写入该用户的主/备用订阅链接，会员到期日设为套餐到期日</p>
+        <div class="modal-actions">
+          <button class="btn" onclick="closePoolAssignModal()">取消</button>
+          <button class="btn btn-success" onclick="confirmPoolAssign()">确认分配</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="subscribe-modal" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <h3>设置订阅链接</h3>
+        <div class="form-group">
+          <label>用户</label>
+          <input type="text" id="subscribe-user" readonly>
+        </div>
+        <div class="form-group">
+          <label>从订阅汇总选择</label>
+          <select id="subscribe-pool-select" onchange="applyPoolToUserSubscribe()">
+            <option value="">— 手动填写或选择套餐 —</option>
+          </select>
+          <p class="form-hint">选择后仅填充下方链接，需点「保存」；选「分配并充值」请在订阅汇总页操作</p>
+        </div>
+        <div class="form-group">
+          <label>主订阅链接</label>
+          <input type="text" id="subscribe-url" placeholder="https://example.com/subscribe/xxx">
+        </div>
+        <p class="form-hint" style="margin-bottom: 10px;">备用链接（最多 5 条，客户端会一并导入）</p>
+        <div class="form-group">
+          <label>备用 1</label>
+          <input type="text" class="subscribe-backup-input" data-index="0" placeholder="选填">
+        </div>
+        <div class="form-group">
+          <label>备用 2</label>
+          <input type="text" class="subscribe-backup-input" data-index="1" placeholder="选填">
+        </div>
+        <div class="form-group">
+          <label>备用 3</label>
+          <input type="text" class="subscribe-backup-input" data-index="2" placeholder="选填">
+        </div>
+        <div class="form-group">
+          <label>备用 4</label>
+          <input type="text" class="subscribe-backup-input" data-index="3" placeholder="选填">
+        </div>
+        <div class="form-group">
+          <label>备用 5</label>
+          <input type="text" class="subscribe-backup-input" data-index="4" placeholder="选填">
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeSubscribeModal()">取消</button>
+          <button class="btn btn-danger" onclick="clearSubscribeUrl()">清除全部</button>
+          <button class="btn btn-success" onclick="saveSubscribeUrl()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="add-user-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>添加用户</h3>
+        <p class="form-hint" style="margin-bottom: 15px;">手机号、邮箱<strong>至少填一项</strong>；仅填手机号时还可短信验证码登录。登录密码必填。</p>
+        <div id="add-user-error" class="alert alert-error hidden"></div>
+        <div class="form-group">
+          <label>手机号</label>
+          <input type="text" id="add-user-phone" placeholder="选填，11 位大陆手机号" maxlength="11">
+        </div>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" id="add-user-email" placeholder="选填，user@example.com">
+        </div>
+        <div class="form-group">
+          <label>登录密码 <span style="color:#d32f2f">*</span></label>
+          <input type="password" id="add-user-password" placeholder="8–64 位，须含字母和数字">
+        </div>
+        <div class="form-group">
+          <label>确认密码 <span style="color:#d32f2f">*</span></label>
+          <input type="password" id="add-user-password-confirm" placeholder="再次输入密码">
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeAddUserModal()">取消</button>
+          <button class="btn btn-success" onclick="submitAddUser()">创建用户</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="recharge-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>为用户充值</h3>
+        <div class="form-group">
+          <label>用户</label>
+          <input type="text" id="recharge-user" readonly>
+        </div>
+        <div class="form-group">
+          <label>充值天数</label>
+          <input type="number" id="recharge-days" min="1" value="30">
+        </div>
+        <div class="form-group">
+          <label>金额（可选）</label>
+          <input type="number" id="recharge-amount" min="0" step="0.01" value="0">
+        </div>
+        <div class="form-group">
+          <label>备注（可选）</label>
+          <input type="text" id="recharge-remark" placeholder="如：月卡充值">
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeRechargeModal()">取消</button>
+          <button class="btn btn-success" onclick="doRecharge()">确认充值</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let adminToken = localStorage.getItem('admin_token');
+    let currentRechargeUserId = null;
+    let subscriptionPoolCache = [];
+    let currentAssignPoolId = null;
+    let currentAssignUserLabel = '';
+    const RECENT_POOL_ASSIGN_KEY = 'clash_verge_admin_recent_pool_assigns';
+    const RECENT_POOL_ASSIGN_MAX = 10;
+
+    function openAddUserModal() {
+      document.getElementById('add-user-phone').value = '';
+      document.getElementById('add-user-email').value = '';
+      document.getElementById('add-user-password').value = '';
+      document.getElementById('add-user-password-confirm').value = '';
+      document.getElementById('add-user-error').classList.add('hidden');
+      document.getElementById('add-user-modal').classList.remove('hidden');
+    }
+
+    function closeAddUserModal() {
+      document.getElementById('add-user-modal').classList.add('hidden');
+    }
+
+    async function submitAddUser() {
+      const errorEl = document.getElementById('add-user-error');
+      errorEl.classList.add('hidden');
+      const phone = document.getElementById('add-user-phone').value.replace(/\s+/g, '').trim();
+      const email = document.getElementById('add-user-email').value.trim();
+      const password = document.getElementById('add-user-password').value;
+      const password_confirm = document.getElementById('add-user-password-confirm').value;
+      if (!phone && !email) {
+        errorEl.textContent = '手机号和邮箱至少填写一项';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (!password) {
+        errorEl.textContent = '请填写登录密码';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      try {
+        const data = await apiCall('/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({ phone, email, password, password_confirm })
+        });
+        alert(data.message || '用户创建成功');
+        closeAddUserModal();
+        loadDashboard();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function showPage(page) {
+      document.getElementById('login-page').classList.toggle('hidden', page !== 'login');
+      document.getElementById('dashboard-page').classList.toggle('hidden', page !== 'dashboard');
+    }
+
+    async function apiCall(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...options.headers };
+      if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+      const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        const hint = res.status === 404
+          ? '接口不存在，请重启 auth-server（npm run dev）'
+          : `服务器返回非 JSON（HTTP ${res.status}），请查看认证服务控制台日志`;
+        throw new Error(hint);
+      }
+      if (!res.ok) throw new Error(data.message || 'Request failed');
+      return data;
+    }
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('login-error');
+      errorEl.classList.add('hidden');
+      try {
+        const data = await apiCall('/admin/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: document.getElementById('login-username').value,
+            password: document.getElementById('login-password').value
+          })
+        });
+        adminToken = data.access_token;
+        localStorage.setItem('admin_token', adminToken);
+        document.getElementById('admin-username').textContent = data.admin.username;
+        showPage('dashboard');
+        loadDashboard();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    };
+
+    document.getElementById('init-form').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await apiCall('/admin/init', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: document.getElementById('init-username').value,
+            password: document.getElementById('init-password').value,
+            secret_key: document.getElementById('init-secret').value || 'clash-verge-admin-init-2024'
+          })
+        });
+        alert('管理员创建成功，请登录');
+        document.getElementById('login-username').value = document.getElementById('init-username').value;
+      } catch (err) {
+        alert('创建失败: ' + err.message);
+      }
+    };
+
+    function logout() {
+      adminToken = null;
+      localStorage.removeItem('admin_token');
+      showPage('login');
+    }
+
+    async function loadDashboard() {
+      await loadStats();
+      await loadSubscriptionPool();
+      await loadUsers();
+      await loadLogs();
+    }
+
+    async function loadStats() {
+      try {
+        const data = await apiCall('/admin/stats');
+        document.getElementById('stat-total-users').textContent = data.total_users;
+        document.getElementById('stat-active-users').textContent = data.active_subscriptions;
+        if (data.subscription_pool_count != null) {
+          document.getElementById('stat-pool-count').textContent = data.subscription_pool_count;
+        }
+      } catch (err) {
+        console.error('加载统计失败:', err);
+      }
+    }
+
+    function toDateInputValue(expireAt) {
+      const d = new Date(expireAt * 1000);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function defaultExpireDateInput() {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      return toDateInputValue(Math.floor(d.getTime() / 1000));
+    }
+
+    function formatPoolExpireDisplay(expireAt) {
+      if (!expireAt) return '-';
+      return new Date(expireAt * 1000).toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    /** 按到期日划分：年 → 月 → 上半月(1-15) / 下半月(16-月末) */
+    function getPoolExpireGrouping(expireAt) {
+      const d = new Date(expireAt * 1000);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      const yearKey = String(year);
+      const yearMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const isFirstHalf = day <= 15;
+      return {
+        yearKey,
+        yearLabel: `${year}`,
+        yearMonthKey,
+        yearMonthLabel: `${year}年${month}月`,
+        halfKey: isFirstHalf ? 'first' : 'second',
+        halfLabel: isFirstHalf ? '上半月（1–15 日）' : '下半月（16 日–月末）',
+        halfOrder: isFirstHalf ? 0 : 1,
+      };
+    }
+
+    function groupPoolTree(items) {
+      const yearMap = new Map();
+      for (const item of items) {
+        const g = getPoolExpireGrouping(item.expire_at);
+        if (!yearMap.has(g.yearKey)) {
+          yearMap.set(g.yearKey, { key: g.yearKey, label: g.yearLabel, months: new Map() });
+        }
+        const yearNode = yearMap.get(g.yearKey);
+        if (!yearNode.months.has(g.yearMonthKey)) {
+          yearNode.months.set(g.yearMonthKey, {
+            key: g.yearMonthKey,
+            label: g.yearMonthLabel,
+            halves: new Map(),
+          });
+        }
+        const monthNode = yearNode.months.get(g.yearMonthKey);
+        if (!monthNode.halves.has(g.halfKey)) {
+          monthNode.halves.set(g.halfKey, {
+            key: g.halfKey,
+            label: g.halfLabel,
+            order: g.halfOrder,
+            items: [],
+          });
+        }
+        monthNode.halves.get(g.halfKey).items.push(item);
+      }
+
+      const years = Array.from(yearMap.values()).sort((a, b) => a.key.localeCompare(b.key));
+      for (const year of years) {
+        const months = Array.from(year.months.values()).sort((a, b) => a.key.localeCompare(b.key));
+        for (const month of months) {
+          month.halvesList = Array.from(month.halves.values()).sort((a, b) => a.order - b.order);
+          for (const half of month.halvesList) {
+            half.items.sort((a, b) => a.expire_at - b.expire_at);
+          }
+          month.totalCount = month.halvesList.reduce((n, h) => n + h.items.length, 0);
+        }
+        year.monthsList = months;
+        year.totalCount = months.reduce((n, m) => n + m.totalCount, 0);
+      }
+      return years;
+    }
+
+    function getPoolTreeTimeKeys() {
+      const d = new Date();
+      return {
+        nowYear: String(d.getFullYear()),
+        nowMonthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      };
+    }
+
+    function renderPoolHalfBody(half, mode, selectedPoolId) {
+      if (!half.items.length) {
+        return '<div class="pool-empty-half">本时段暂无订阅</div>';
+      }
+      if (mode === 'picker') {
+        const list = half.items.map((p) => {
+          const selected = p.id === selectedPoolId ? ' selected' : '';
+          return `<button type="button" class="pool-picker-item${selected}" onclick="selectPoolForAssign(${p.id})">
+            <strong>${escapeHtml(p.name)}</strong>
+            <span class="pool-picker-meta">到期 ${formatPoolExpireDisplay(p.expire_at)} · ID ${p.id}</span>
+          </button>`;
+        }).join('');
+        return `<div class="pool-picker-list">${list}</div>`;
+      }
+      const rows = half.items.map((p) => renderPoolItemRow(p)).join('');
+      return `<div class="pool-table-wrap"><table>${POOL_TABLE_HEAD}<tbody>${rows}</tbody></table></div>`;
+    }
+
+    function renderPoolTreeHtml(items, options = {}) {
+      const mode = options.mode || 'list';
+      const selectedPoolId = options.selectedPoolId ?? null;
+      if (!items.length) {
+        return '<div class="pool-tree-empty">暂无订阅，请点击「添加订阅」</div>';
+      }
+
+      const years = groupPoolTree(items);
+      const { nowYear, nowMonthKey } = getPoolTreeTimeKeys();
+
+      return years.map((year) => {
+        const yearOpen = year.key >= nowYear ? ' open' : '';
+        const monthsHtml = year.monthsList.map((month) => {
+          const monthOpen = month.key >= nowMonthKey ? ' open' : '';
+          const halvesHtml = month.halvesList.map((half) => {
+            const body = renderPoolHalfBody(half, mode, selectedPoolId);
+            return `<details class="pool-half-group" open>
+              <summary><span>${half.label}</span><span class="pool-count-badge">${half.items.length} 条</span></summary>
+              ${body}
+            </details>`;
+          }).join('');
+          return `<details class="pool-month-group"${monthOpen}>
+            <summary><span>${month.label}</span><span class="pool-count-badge">共 ${month.totalCount} 条</span></summary>
+            <div class="pool-month-body">${halvesHtml}</div>
+          </details>`;
+        }).join('');
+
+        return `<details class="pool-year-group"${yearOpen}>
+          <summary><span>${year.label} 年</span><span class="pool-count-badge">共 ${year.totalCount} 条</span></summary>
+          <div class="pool-year-body">${monthsHtml}</div>
+        </details>`;
+      }).join('');
+    }
+
+    function renderPoolItemRow(p) {
+      const backupCount = (p.subscribe_url_backups || []).filter(Boolean).length;
+      const updated = new Date(p.updated_at * 1000).toLocaleString();
+      const safeName = escapeHtml(p.name).replace(/'/g, '&#39;');
+      return `<tr>
+        <td>${p.id}</td>
+        <td><strong>${escapeHtml(p.name)}</strong></td>
+        <td><span class="url-ellipsis" title="${escapeHtml(p.subscribe_url)}">${escapeHtml(p.subscribe_url)}</span></td>
+        <td>${backupCount}</td>
+        <td>${formatPoolExpireDisplay(p.expire_at)}</td>
+        <td>${updated}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-primary" style="margin:2px;" onclick="openPoolAssignModal(${p.id})">分配</button>
+          <button class="btn" style="margin:2px;" onclick="openPoolModal(${p.id})">编辑</button>
+          <button class="btn btn-danger" style="margin:2px;" onclick="deletePoolItem(${p.id}, '${safeName}')">删除</button>
+        </td>
+      </tr>`;
+    }
+
+    const POOL_TABLE_HEAD = `<thead><tr>
+      <th>ID</th><th>备注名称</th><th>主链接</th><th>备用</th><th>到期日</th><th>更新时间</th><th>操作</th>
+    </tr></thead>`;
+
+    function renderPoolGroupedList(items) {
+      document.getElementById('pool-groups').innerHTML = renderPoolTreeHtml(items, { mode: 'list' });
+    }
+
+    function toggleAllPoolGroups(expand) {
+      document.querySelectorAll('#pool-groups details').forEach((el) => {
+        el.open = expand;
+      });
+    }
+
+    function getRecentPoolAssigns() {
+      try {
+        const raw = localStorage.getItem(RECENT_POOL_ASSIGN_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function pushRecentPoolAssign(poolItem) {
+      if (!poolItem?.id || !poolItem.subscribe_url) return;
+      const entry = {
+        poolId: poolItem.id,
+        name: poolItem.name,
+        subscribe_url: poolItem.subscribe_url,
+        expire_at: poolItem.expire_at,
+        assignedAt: Math.floor(Date.now() / 1000),
+      };
+      let list = getRecentPoolAssigns().filter(
+        (x) => x.subscribe_url !== entry.subscribe_url && x.poolId !== entry.poolId,
+      );
+      list.unshift(entry);
+      list = list.slice(0, RECENT_POOL_ASSIGN_MAX);
+      localStorage.setItem(RECENT_POOL_ASSIGN_KEY, JSON.stringify(list));
+    }
+
+    function renderRecentPoolAssigns() {
+      const container = document.getElementById('pool-recent-assigns');
+      if (!container) return;
+      const list = getRecentPoolAssigns();
+      if (!list.length) {
+        container.innerHTML = '<div class="form-hint" style="margin:0;">暂无最近分配记录</div>';
+        return;
+      }
+      container.innerHTML = list.map((r) => {
+        const stillExists = subscriptionPoolCache.some((p) => p.id === r.poolId);
+        const label = escapeHtml(r.name);
+        const expire = formatPoolExpireDisplay(r.expire_at);
+        if (!stillExists) {
+          return `<div class="pool-recent-item" style="opacity:0.65;">
+            <span><strong>${label}</strong> <span class="pool-picker-meta">（套餐已删除）${expire}</span></span>
+          </div>`;
+        }
+        return `<div class="pool-recent-item">
+          <span><strong>${label}</strong> <span class="pool-picker-meta">${expire}</span></span>
+          <button type="button" class="btn btn-primary" onclick="selectPoolForAssign(${r.poolId})">选用</button>
+        </div>`;
+      }).join('');
+    }
+
+    function updatePoolAssignSelectedDisplay() {
+      const el = document.getElementById('pool-assign-selected');
+      if (!el) return;
+      if (!currentAssignPoolId) {
+        el.className = 'pool-assign-selected empty';
+        el.textContent = '请从下方分级列表或最近分配中选择套餐';
+        return;
+      }
+      const item = subscriptionPoolCache.find((p) => p.id === currentAssignPoolId);
+      if (!item) {
+        el.className = 'pool-assign-selected empty';
+        el.textContent = '所选套餐不存在，请重新选择';
+        currentAssignPoolId = null;
+        return;
+      }
+      el.className = 'pool-assign-selected';
+      el.innerHTML = `已选：<strong>${escapeHtml(item.name)}</strong> · 到期 ${formatPoolExpireDisplay(item.expire_at)} · ID ${item.id}`;
+    }
+
+    function renderPoolAssignPicker() {
+      const picker = document.getElementById('pool-assign-picker');
+      if (!picker) return;
+      picker.innerHTML = renderPoolTreeHtml(subscriptionPoolCache, {
+        mode: 'picker',
+        selectedPoolId: currentAssignPoolId,
+      });
+    }
+
+    function selectPoolForAssign(poolId) {
+      currentAssignPoolId = poolId;
+      updatePoolAssignSelectedDisplay();
+      renderPoolAssignPicker();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function readPoolBackupInputs() {
+      const backups = Array.from({ length: 5 }, () => '');
+      document.querySelectorAll('.pool-backup-input').forEach((input) => {
+        const idx = parseInt(input.dataset.index, 10);
+        if (!Number.isNaN(idx) && idx >= 0 && idx < 5) {
+          backups[idx] = input.value.trim();
+        }
+      });
+      return backups;
+    }
+
+    function fillPoolBackupInputs(backups) {
+      const list = backups || [];
+      document.querySelectorAll('.pool-backup-input').forEach((input) => {
+        const idx = parseInt(input.dataset.index, 10);
+        input.value = list[idx] || '';
+      });
+    }
+
+    function refreshPoolSelectOptions() {
+      const select = document.getElementById('subscribe-pool-select');
+      if (!select) return;
+      const current = select.value;
+      const years = groupPoolTree(subscriptionPoolCache);
+      let html = '<option value="">— 手动填写或选择套餐 —</option>';
+      for (const year of years) {
+        html += `<optgroup label="${year.label} 年">`;
+        for (const month of year.monthsList) {
+          for (const half of month.halvesList) {
+            for (const p of half.items) {
+              html += `<option value="${p.id}">${escapeHtml(p.name)}（${month.label} ${half.label.replace(/（.*?）/, '')}）</option>`;
+            }
+          }
+        }
+        html += '</optgroup>';
+      }
+      select.innerHTML = html;
+      if (current) select.value = current;
+    }
+
+    async function loadSubscriptionPool() {
+      try {
+        const data = await apiCall('/admin/subscription-pool');
+        subscriptionPoolCache = data.items || [];
+        document.getElementById('stat-pool-count').textContent = data.total ?? subscriptionPoolCache.length;
+        renderPoolGroupedList(subscriptionPoolCache);
+        refreshPoolSelectOptions();
+      } catch (err) {
+        console.error('加载订阅汇总失败:', err);
+      }
+    }
+
+    function openPoolModal(editId) {
+      document.getElementById('pool-edit-id').value = editId ? String(editId) : '';
+      if (editId) {
+        const item = subscriptionPoolCache.find((p) => p.id === editId);
+        if (!item) return;
+        document.getElementById('pool-modal-title').textContent = '编辑订阅';
+        document.getElementById('pool-name').value = item.name;
+        document.getElementById('pool-expire-date').value = toDateInputValue(item.expire_at);
+        document.getElementById('pool-url').value = item.subscribe_url;
+        fillPoolBackupInputs(item.subscribe_url_backups);
+      } else {
+        document.getElementById('pool-modal-title').textContent = '添加订阅';
+        document.getElementById('pool-name').value = '';
+        document.getElementById('pool-expire-date').value = defaultExpireDateInput();
+        document.getElementById('pool-url').value = '';
+        fillPoolBackupInputs([]);
+      }
+      document.getElementById('pool-modal').classList.remove('hidden');
+    }
+
+    function closePoolModal() {
+      document.getElementById('pool-modal').classList.add('hidden');
+    }
+
+    async function savePoolItem() {
+      const editId = document.getElementById('pool-edit-id').value;
+      const body = {
+        name: document.getElementById('pool-name').value.trim(),
+        subscribe_url: document.getElementById('pool-url').value.trim(),
+        subscribe_url_backups: readPoolBackupInputs(),
+        expire_at: document.getElementById('pool-expire-date').value
+      };
+      try {
+        if (editId) {
+          await apiCall(`/admin/subscription-pool/${editId}`, { method: 'PATCH', body: JSON.stringify(body) });
+        } else {
+          await apiCall('/admin/subscription-pool', { method: 'POST', body: JSON.stringify(body) });
+        }
+        closePoolModal();
+        alert('保存成功');
+        await loadSubscriptionPool();
+      } catch (err) {
+        alert('保存失败: ' + err.message);
+      }
+    }
+
+    async function deletePoolItem(id, name) {
+      if (!confirm(`确定删除订阅「${name}」？`)) return;
+      try {
+        await apiCall(`/admin/subscription-pool/${id}`, { method: 'DELETE' });
+        alert('已删除');
+        await loadSubscriptionPool();
+      } catch (err) {
+        alert('删除失败: ' + err.message);
+      }
+    }
+
+    function openPoolAssignModal(poolId, userId, userLabel) {
+      if (!subscriptionPoolCache.length) {
+        alert('请先在「订阅汇总」中添加订阅套餐');
+        return;
+      }
+      currentAssignPoolId = poolId || null;
+      currentAssignUserLabel = userLabel || '';
+      const userIdInput = document.getElementById('pool-assign-user-id');
+      const userLabelInput = document.getElementById('pool-assign-user-label');
+      if (userId) {
+        userIdInput.value = String(userId);
+        userLabelInput.value = userLabel
+          ? `${userLabel}（ID ${userId}）`
+          : `用户 ID ${userId}`;
+      } else {
+        userIdInput.value = '';
+        userLabelInput.value = '';
+      }
+      renderRecentPoolAssigns();
+      updatePoolAssignSelectedDisplay();
+      renderPoolAssignPicker();
+      document.getElementById('pool-assign-modal').classList.remove('hidden');
+    }
+
+    function openUserAssignModal(userId, userLabel) {
+      openPoolAssignModal(null, userId, userLabel);
+    }
+
+    function closePoolAssignModal() {
+      document.getElementById('pool-assign-modal').classList.add('hidden');
+      currentAssignPoolId = null;
+      currentAssignUserLabel = '';
+    }
+
+    async function confirmPoolAssign() {
+      if (!currentAssignPoolId) {
+        alert('请先选择要分配的套餐');
+        return;
+      }
+      const poolItem = subscriptionPoolCache.find((p) => p.id === currentAssignPoolId);
+      if (!poolItem) {
+        alert('所选套餐不存在，请重新选择');
+        return;
+      }
+      const user_id = parseInt(document.getElementById('pool-assign-user-id').value, 10);
+      if (!user_id) {
+        alert('请填写用户 ID');
+        return;
+      }
+      try {
+        const data = await apiCall(`/admin/subscription-pool/${currentAssignPoolId}/assign`, {
+          method: 'POST',
+          body: JSON.stringify({ user_id })
+        });
+        pushRecentPoolAssign(poolItem);
+        closePoolAssignModal();
+        alert(data.message || '分配成功');
+        loadDashboard();
+      } catch (err) {
+        alert('分配失败: ' + err.message);
+      }
+    }
+
+    function applyPoolToUserSubscribe() {
+      const id = parseInt(document.getElementById('subscribe-pool-select').value, 10);
+      if (!id) return;
+      const item = subscriptionPoolCache.find((p) => p.id === id);
+      if (!item) return;
+      document.getElementById('subscribe-url').value = item.subscribe_url || '';
+      document.querySelectorAll('.subscribe-backup-input').forEach((input) => {
+        const idx = parseInt(input.dataset.index, 10);
+        input.value = (item.subscribe_url_backups || [])[idx] || '';
+      });
+    }
+
+    async function loadUsers() {
+      try {
+        const search = document.getElementById('search-phone').value;
+        const data = await apiCall(`/admin/users?search=${encodeURIComponent(search)}`);
+        const tbody = document.getElementById('users-table');
+        
+        let expiredCount = 0;
+        
+        tbody.innerHTML = data.users.map(u => {
+          const label = (u.phone || u.email || '用户' + u.id).replace(/'/g, '');
+          let status = '未开通', statusClass = 'status-none';
+          let expireAt = '-', remaining = '-';
+          if (u.subscription) {
+            if (u.subscription.is_active) {
+              status = '有效';
+              statusClass = 'status-active';
+            } else {
+              status = '已过期';
+              statusClass = 'status-expired';
+              expiredCount++;
+            }
+            expireAt = new Date(u.subscription.expire_at * 1000).toLocaleString();
+            remaining = u.subscription.remaining_days + '天';
+          }
+          const accountStatus = u.status === 'disabled' ? '<span class="status-expired">已禁用</span>' : '正常';
+          userSubscribeData[u.id] = {
+            subscribe_url: u.subscribe_url || '',
+            subscribe_url_backups: u.subscribe_url_backups || []
+          };
+          const linkCount = countSubscribeLinks(userSubscribeData[u.id]);
+          const urlDisplay = linkCount > 0
+            ? `<span style="color:#388e3c;cursor:pointer;" title="主链接 + ${Math.max(0, linkCount - 1)} 个备用" onclick="openSubscribeModal(${u.id}, '${label}')">已设置(${linkCount})</span>`
+            : `<span style="color:#999;cursor:pointer;" onclick="openSubscribeModal(${u.id}, '${label}')">未设置</span>`;
+          const toggleLabel = u.status === 'disabled' ? '启用' : '禁用';
+          const toggleNext = u.status === 'disabled' ? 'active' : 'disabled';
+          return `<tr>
+            <td>${u.id}</td>
+            <td>${u.phone || '-'}</td>
+            <td>${u.email || '-'}${u.has_password ? ' ✓' : ''}</td>
+            <td>${accountStatus}</td>
+            <td>${urlDisplay}</td>
+            <td class="${statusClass}">${status}</td>
+            <td>${expireAt}</td>
+            <td>${remaining}</td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-primary" style="margin:2px;" onclick="openSubscribeModal(${u.id}, '${label}')">订阅</button>
+              <button class="btn" style="margin:2px;" onclick="openUserAssignModal(${u.id}, '${label}')">分配套餐</button>
+              <button class="btn btn-success" style="margin:2px;" onclick="openRechargeModal(${u.id}, '${label}')">充值</button>
+              <button class="btn" style="margin:2px;" onclick="toggleUserStatus(${u.id}, '${toggleNext}')">${toggleLabel}</button>
+              <button class="btn btn-danger" style="margin:2px;" onclick="forceLogout(${u.id})">下线</button>
+            </td>
+          </tr>`;
+        }).join('');
+
+        document.getElementById('stat-expired-users').textContent = expiredCount;
+      } catch (err) {
+        if (err.message.includes('需要管理员')) logout();
+        else alert('加载用户失败: ' + err.message);
+      }
+    }
+
+    async function loadLogs() {
+      try {
+        const data = await apiCall('/admin/recharge-logs');
+        const tbody = document.getElementById('logs-table');
+        tbody.innerHTML = data.logs.map(l => `<tr>
+          <td>${l.id}</td>
+          <td>${l.user_phone}</td>
+          <td>${l.admin_username}</td>
+          <td>${l.days_added}天</td>
+          <td>¥${l.amount.toFixed(2)}</td>
+          <td>${l.remark || '-'}</td>
+          <td>${new Date(l.created_at * 1000).toLocaleString()}</td>
+        </tr>`).join('');
+      } catch (err) {
+        console.error('加载充值记录失败:', err);
+      }
+    }
+
+    let currentSubscribeUserId = null;
+    const userSubscribeData = {};
+
+    function countSubscribeLinks(data) {
+      if (!data) return 0;
+      let n = data.subscribe_url ? 1 : 0;
+      n += (data.subscribe_url_backups || []).filter((url) => url && String(url).trim()).length;
+      return n;
+    }
+
+    function openSubscribeModal(userId, phone) {
+      currentSubscribeUserId = userId;
+      const data = userSubscribeData[userId] || { subscribe_url: '', subscribe_url_backups: [] };
+      document.getElementById('subscribe-user').value = phone;
+      document.getElementById('subscribe-pool-select').value = '';
+      document.getElementById('subscribe-url').value = data.subscribe_url || '';
+      const backups = data.subscribe_url_backups || [];
+      document.querySelectorAll('.subscribe-backup-input').forEach((input) => {
+        const idx = parseInt(input.dataset.index, 10);
+        input.value = backups[idx] || '';
+      });
+      document.getElementById('subscribe-modal').classList.remove('hidden');
+    }
+
+    function closeSubscribeModal() {
+      document.getElementById('subscribe-modal').classList.add('hidden');
+      currentSubscribeUserId = null;
+    }
+
+    function readSubscribeBackupInputs() {
+      const backups = Array.from({ length: 5 }, () => '');
+      document.querySelectorAll('.subscribe-backup-input').forEach((input) => {
+        const idx = parseInt(input.dataset.index, 10);
+        if (!Number.isNaN(idx) && idx >= 0 && idx < 5) {
+          backups[idx] = input.value.trim();
+        }
+      });
+      return backups;
+    }
+
+    async function saveSubscribeUrl() {
+      if (!currentSubscribeUserId) return;
+      const url = document.getElementById('subscribe-url').value.trim();
+      const backups = readSubscribeBackupInputs();
+      try {
+        await apiCall('/admin/set-subscribe-url', {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: currentSubscribeUserId,
+            subscribe_url: url || null,
+            subscribe_url_backups: backups
+          })
+        });
+        closeSubscribeModal();
+        alert(url || backups.length ? `订阅已保存（主链接${url ? 1 : 0} + 备用${backups.length}）` : '订阅链接已清除');
+        loadUsers();
+      } catch (err) {
+        alert('设置失败: ' + err.message);
+      }
+    }
+
+    async function clearSubscribeUrl() {
+      document.getElementById('subscribe-url').value = '';
+      document.querySelectorAll('.subscribe-backup-input').forEach((input) => { input.value = ''; });
+      await saveSubscribeUrl();
+    }
+
+    function openRechargeModal(userId, phone) {
+      currentRechargeUserId = userId;
+      document.getElementById('recharge-user').value = phone;
+      document.getElementById('recharge-days').value = 30;
+      document.getElementById('recharge-amount').value = 0;
+      document.getElementById('recharge-remark').value = '';
+      document.getElementById('recharge-modal').classList.remove('hidden');
+    }
+
+    function closeRechargeModal() {
+      document.getElementById('recharge-modal').classList.add('hidden');
+      currentRechargeUserId = null;
+    }
+
+    async function toggleUserStatus(userId, status) {
+      if (!confirm(status === 'disabled' ? '确定禁用该用户？' : '确定启用该用户？')) return;
+      try {
+        await apiCall(`/admin/users/${userId}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+        loadDashboard();
+      } catch (err) {
+        alert('操作失败: ' + err.message);
+      }
+    }
+
+    async function forceLogout(userId) {
+      if (!confirm('确定强制该用户所有设备下线？')) return;
+      try {
+        await apiCall(`/admin/users/${userId}/logout-all`, { method: 'POST' });
+        alert('已强制下线');
+      } catch (err) {
+        alert('操作失败: ' + err.message);
+      }
+    }
+
+    async function doRecharge() {
+      if (!currentRechargeUserId) return;
+      try {
+        await apiCall('/admin/recharge', {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: currentRechargeUserId,
+            days: parseInt(document.getElementById('recharge-days').value),
+            amount: parseFloat(document.getElementById('recharge-amount').value) || 0,
+            remark: document.getElementById('recharge-remark').value || null
+          })
+        });
+        closeRechargeModal();
+        alert('充值成功');
+        loadDashboard();
+      } catch (err) {
+        alert('充值失败: ' + err.message);
+      }
+    }
+
+    if (adminToken) {
+      apiCall('/admin/me').then(data => {
+        document.getElementById('admin-username').textContent = data.admin.username;
+        showPage('dashboard');
+        loadDashboard();
+      }).catch(() => {
+        logout();
+      });
+    } else {
+      showPage('login');
+    }
+  </script>
+</body>
+</html>

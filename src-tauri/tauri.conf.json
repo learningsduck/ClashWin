@@ -1,0 +1,61 @@
+{
+  "version": "2.4.7",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "bundle": {
+    "active": true,
+    "longDescription": "ClashWin",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": ["resources"],
+    "publisher": "ClashWin",
+    "externalBin": ["sidecar/verge-mihomo", "sidecar/verge-mihomo-alpha"],
+    "copyright": "GNU General Public License v3.0",
+    "category": "DeveloperTool",
+    "shortDescription": "ClashWin",
+    "createUpdaterArtifacts": true
+  },
+  "build": {
+    "beforeBuildCommand": "pnpm run web:build",
+    "frontendDist": "../dist",
+    "beforeDevCommand": "pnpm run web:dev",
+    "devUrl": "http://localhost:3333/",
+    "removeUnusedCommands": true
+  },
+  "productName": "ClashWin",
+  "identifier": "io.github.clash-Win-rev.clash-Win-rev",
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkzRkNCOTY4MzU2NDlGMDUKUldRRm4yUTFhTG44azlCaDBXejdOdyt4YjFOZGEwcmdpUE5KQVVxaE1kNHZqd0VvUE40QStXT2kK",
+      "endpoints": [
+        "https://github.com/learningsduck/ClashWin/releases/download/updater/update.json",
+        "https://gh-proxy.com/https://github.com/learningsduck/ClashWin/releases/download/updater/update.json"
+      ],
+      "windows": {
+        "installMode": "basicUi"
+      }
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["clash", "clash-verge"]
+      }
+    }
+  },
+  "app": {
+    "security": {
+      "capabilities": ["desktop-capability", "migrated"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["**"],
+          "requireLiteralLeadingDot": false
+        }
+      },
+      "csp": null
+    }
+  }
+}

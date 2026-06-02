@@ -1,0 +1,34 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "io.github.clash-Win-rev.clash-Win-rev",
+  "bundle": {
+    "targets": ["nsis"],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "fixedRuntime",
+        "path": "./Microsoft.WebView2.FixedVersionRuntime.133.0.3065.92.x64/"
+      },
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "languages": ["SimpChinese", "English"],
+        "installMode": "perMachine",
+        "template": "./packages/windows/installer.nsi"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "endpoints": [
+        "https://github.com/learningsduck/ClashWin/releases/download/updater/update-fixed-webview2.json",
+        "https://gh-proxy.com/https://github.com/learningsduck/ClashWin/releases/download/updater/update-fixed-webview2.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkzRkNCOTY4MzU2NDlGMDUKUldRRm4yUTFhTG44azlCaDBXejdOdyt4YjFOZGEwcmdpUE5KQVVxaE1kNHZqd0VvUE40QStXT2kK"
+    }
+  }
+}

@@ -1,0 +1,125 @@
+# 手动构建 Windows x64 安装包并上传到 Release（仅 Windows，便于快速试用）
+name: Build Windows x64
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_primary:
+        description: "内置默认 API（VITE_AUTH_API_PRIMARY，必须 https 域名）"
+        required: false
+        default: "https://zhuifeng688.xyz"
+      api_backups:
+        description: "备用 API JSON 数组，如 [\"https://backup.example.com\"]"
+        required: false
+        default: "[]"
+      create_release:
+        description: "上传到 GitHub Release（预发布）"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: short
+  HUSKY: "0"
+  TARGET: x86_64-pc-windows-msvc
+
+jobs:
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.91.0"
+          targets: ${{ env.TARGET }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write .env for build
+        shell: bash
+        run: |
+          {
+            echo "VITE_AUTH_API_PRIMARY=${{ inputs.api_primary }}"
+            echo "VITE_AUTH_API_BACKUPS=${{ inputs.api_backups }}"
+          } > .env
+
+      - name: Prebuild (mihomo sidecar)
+        run: pnpm run prebuild ${{ env.TARGET }}
+
+      - name: Build Tauri (Windows x64)
+        run: pnpm tauri build --target ${{ env.TARGET }} --config src-tauri/tauri.ci-preview.conf.json
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-artifacts
+          FOUND=0
+          for BUNDLE in \
+            "target/${TARGET}/release/bundle" \
+            "src-tauri/target/${TARGET}/release/bundle"; do
+            if [ -d "$BUNDLE" ]; then
+              echo "Collecting from $BUNDLE"
+              find "$BUNDLE" -type f \( -name "*.exe" -o -name "*.msi" \) -exec cp -v {} dist-artifacts/ \;
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "Bundle directory not found. Listing target dirs:"
+            find . -path '*/release/bundle/*' -type f \( -name '*.exe' -o -name '*.msi' \) 2>/dev/null || true
+            exit 1
+          fi
+          ls -la dist-artifacts/
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClashWin-Windows-x64
+          path: dist-artifacts/
+          retention-days: 14
+
+      - name: Read version
+        id: ver
+        shell: bash
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish pre-release
+        if: inputs.create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}-windows-preview
+          name: ClashWin v${{ steps.ver.outputs.version }} (Windows x64 预览)
+          prerelease: true
+          generate_release_notes: true
+          files: dist-artifacts/*
+          body: |
+            Windows x64 预览构建（GitHub Actions 自动生成）。
+
+            - 安装包见下方 Assets（`*-setup.exe` 或便携版）
+            - 需已部署 [ClashFeng-auth](https://github.com/learningsduck/ClashFeng-auth) 并配置 `https://你的域名/public/endpoints.json`
+            - 构建时内置 API：`${{ inputs.api_primary || '(未设置，依赖服务端 endpoints.json)' }}`
