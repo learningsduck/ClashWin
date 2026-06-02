@@ -2,10 +2,12 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 import {
   getOrderedAuthBases,
+  isHttpsRequiredResponse,
   isNetworkError,
   rewriteAuthUrl,
   setActiveAuthBase,
   shouldFailoverResponse,
+  tryHttpsUpgradeUrl,
 } from "./auth-endpoints";
 import { performAuthHttp } from "./auth-http";
 
@@ -24,7 +26,22 @@ export async function authFetch(url: string, init?: RequestInit): Promise<Respon
   for (const base of bases) {
     const targetUrl = rewriteAuthUrl(url, base);
     try {
-      const response = await performAuthHttp(targetUrl, init);
+      let response = await performAuthHttp(targetUrl, init);
+      if (isHttpsRequiredResponse(response)) {
+        const httpsUrl = tryHttpsUpgradeUrl(targetUrl);
+        if (httpsUrl) {
+          const upgraded = await performAuthHttp(httpsUrl, init);
+          if (!isHttpsRequiredResponse(upgraded)) {
+            try {
+              setActiveAuthBase(new URL(httpsUrl).origin);
+            } catch {
+              /* ignore */
+            }
+            return upgraded;
+          }
+          response = upgraded;
+        }
+      }
       if (shouldFailoverResponse(response)) {
         lastResponse = response;
         continue;

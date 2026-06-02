@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       api_primary:
-        description: "内置默认 API（VITE_AUTH_API_PRIMARY，可留空由 endpoints.json 下发）"
+        description: "内置默认 API（VITE_AUTH_API_PRIMARY，建议填 https 域名）"
         required: false
-        default: ""
+        default: "https://zhuifeng688.xyz"
       create_release:
         description: "上传到 GitHub Release（预发布）"
         type: boolean

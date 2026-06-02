@@ -92,11 +92,64 @@ function mergeConfig(...parts: (EndpointsConfig | null | undefined)[]): Endpoint
     }
   }
   const unique = [...new Set(bases.filter(Boolean))];
+  const sanitized = unique.filter((b) => !isInsecureApiBase(b));
+  const ordered = preferHttpsBases(
+    sanitized.length ? sanitized : unique.filter((b) => !isLocalDevBase(b)),
+  );
+  const defaults = readBuiltinDefaults();
   return {
-    primary: unique[0] ?? readBuiltinDefaults().primary,
-    backups: unique.slice(1),
+    primary: ordered[0] ?? defaults.primary,
+    backups: ordered.slice(1),
     updated_at: new Date().toISOString(),
   };
+}
+
+function isLocalDevBase(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+/** HTTP 直连 Node 端口会触发服务端 REQUIRE_HTTPS */
+function isInsecureApiBase(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol === "http:" && (u.port === "3001" || isLocalDevBase(url))) return true;
+    return isLocalDevBase(url);
+  } catch {
+    return false;
+  }
+}
+
+/** 公网客户端优先 HTTPS，避免 HTTP 直连 3001 触发服务端 REQUIRE_HTTPS */
+function preferHttpsBases(bases: string[]): string[] {
+  const https: string[] = [];
+  const http: string[] = [];
+  for (const b of bases) {
+    try {
+      if (new URL(b).protocol === "https:") https.push(b);
+      else http.push(b);
+    } catch {
+      http.push(b);
+    }
+  }
+  return [...https, ...http];
+}
+
+function upgradeToHttps(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:") return null;
+    u.protocol = "https:";
+    if (u.port === "3001") u.port = "";
+    return normalizeAuthBase(u.toString());
+  } catch {
+    return null;
+  }
 }
 
 let endpointsConfig: EndpointsConfig = readBuiltinDefaults();
@@ -120,9 +173,11 @@ export function getOrderedAuthBases(): string[] {
 
 function buildOrderedBases(cfg: EndpointsConfig): string[] {
   const lastOk = loadLastOkBase();
-  const all = [cfg.primary, ...(cfg.backups ?? [])].map(normalizeAuthBase).filter(Boolean);
-  const unique = [...new Set(all)];
-  if (lastOk && unique.includes(lastOk)) {
+  const all = preferHttpsBases(
+    [cfg.primary, ...(cfg.backups ?? [])].map(normalizeAuthBase).filter(Boolean),
+  );
+  const unique = [...new Set(all.filter((b) => !isInsecureApiBase(b)))];
+  if (lastOk && !isInsecureApiBase(lastOk) && unique.includes(lastOk)) {
     return [lastOk, ...unique.filter((b) => b !== lastOk)];
   }
   return unique;
@@ -133,6 +188,7 @@ function isProbeOk(response: Response): boolean {
 }
 
 async function probeBase(base: string, signal?: AbortSignal): Promise<boolean> {
+  if (isInsecureApiBase(base)) return false;
   const url = `${base}${PROBE_PATH}`;
   try {
     const res = await performAuthHttp(url, { method: "GET", signal });
@@ -149,9 +205,24 @@ async function fetchRemoteConfig(base: string): Promise<EndpointsConfig | null> 
     if (!res.ok) return null;
     const data = (await res.json()) as EndpointsConfig;
     if (!data?.primary) return null;
+    let primary = normalizeAuthBase(data.primary);
+    if (isLocalDevBase(primary)) {
+      const upgraded = upgradeToHttps(base);
+      if (upgraded) primary = upgraded;
+      else return null;
+    } else if (primary.startsWith("http://")) {
+      const upgraded = upgradeToHttps(primary);
+      if (upgraded) primary = upgraded;
+    }
+    const backups = (data.backups ?? [])
+      .map(normalizeAuthBase)
+      .filter(Boolean)
+      .filter((b) => !isInsecureApiBase(b))
+      .map((b) => upgradeToHttps(b) ?? b)
+      .filter((b, i, arr) => arr.indexOf(b) === i);
     return {
-      primary: normalizeAuthBase(data.primary),
-      backups: (data.backups ?? []).map(normalizeAuthBase).filter(Boolean),
+      primary,
+      backups,
       updated_at: data.updated_at,
     };
   } catch {
@@ -202,6 +273,14 @@ export function shouldFailoverResponse(response: Response): boolean {
     return true;
   }
   return false;
+}
+
+export function isHttpsRequiredResponse(response: Response): boolean {
+  return response.status === 403;
+}
+
+export function tryHttpsUpgradeUrl(url: string): string | null {
+  return upgradeToHttps(url);
 }
 
 export function isNetworkError(error: unknown): boolean {
