@@ -66,7 +66,7 @@ jobs:
         run: pnpm run prebuild ${{ env.TARGET }}
 
       - name: Build Tauri (Windows x64)
-        run: pnpm tauri build --target ${{ env.TARGET }}
+        run: pnpm tauri build --target ${{ env.TARGET }} --config src-tauri/tauri.ci-preview.conf.json
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
