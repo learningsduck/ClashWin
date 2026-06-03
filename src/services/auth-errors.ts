@@ -22,7 +22,7 @@ export function formatAuthErrorMessage(
     HTTPS_REQUIRED:
       "请使用 HTTPS 域名访问认证服务（勿使用 http:// 或 IP:3001）。可在登录页清除已保存信息后重试",
     NETWORK_ERROR:
-      "无法连接认证服务器。请确认 auth-server 已启动（http://127.0.0.1:3001）；若已开启系统代理，请更新客户端后重试（已改为直连本机）",
+      "无法连接认证服务器，请检查网络、当前 API 地址是否正确，或尝试清除已保存的登录信息后重试",
     AUTH_VERIFY_FAILED: "登录成功但身份校验失败，请检查网络或重启认证服务",
   };
 

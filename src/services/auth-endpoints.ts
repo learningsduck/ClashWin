@@ -21,6 +21,19 @@ const REMOTE_CONFIG_PATH = "/public/endpoints.json";
 /** 公网弱网探测略放宽 */
 const PROBE_TIMEOUT_MS = 10000;
 
+/** 与 .env.example 一致；仅当 .env 显式设为 127.0.0.1:3001 时才走本地 auth-server */
+const DEFAULT_PUBLIC_AUTH_API = "https://zhuifeng688.xyz";
+
+function envPrimary(): string {
+  return (import.meta.env.VITE_AUTH_API_PRIMARY as string | undefined)?.trim() ?? "";
+}
+
+/** 仅在 .env 明确配置本地 API 时使用 127.0.0.1（对接本机 ClashFeng-auth） */
+function useLocalAuthApi(): boolean {
+  const p = envPrimary();
+  return Boolean(p && isLocalDevBase(p));
+}
+
 function readBuiltinDefaults(): EndpointsConfig {
   let backups: string[] = [];
   const rawBackups = import.meta.env.VITE_AUTH_API_BACKUPS;
@@ -34,10 +47,9 @@ function readBuiltinDefaults(): EndpointsConfig {
       /* ignore */
     }
   }
+  const fromEnv = envPrimary();
   return {
-    primary:
-      (import.meta.env.VITE_AUTH_API_PRIMARY as string | undefined)?.trim() ||
-      "http://127.0.0.1:3001",
+    primary: normalizeAuthBase(fromEnv || DEFAULT_PUBLIC_AUTH_API),
     backups,
   };
 }
@@ -57,9 +69,15 @@ function loadStoredConfig(): EndpointsConfig | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as EndpointsConfig;
     if (!parsed?.primary || typeof parsed.primary !== "string") return null;
+    const primary = normalizeAuthBase(parsed.primary);
+    if (shouldIgnoreStaleCachedBase(primary)) return null;
+    const backups = (parsed.backups ?? [])
+      .map(normalizeAuthBase)
+      .filter(Boolean)
+      .filter((b) => !shouldIgnoreStaleCachedBase(b));
     return {
-      primary: normalizeAuthBase(parsed.primary),
-      backups: (parsed.backups ?? []).map(normalizeAuthBase).filter(Boolean),
+      primary,
+      backups,
       updated_at: parsed.updated_at,
     };
   } catch {
@@ -75,7 +93,10 @@ function saveStoredConfig(cfg: EndpointsConfig): void {
 function loadLastOkBase(): string | null {
   if (!canUseStorage()) return null;
   const v = localStorage.getItem(STORAGE_LAST_OK_KEY);
-  return v ? normalizeAuthBase(v) : null;
+  if (!v) return null;
+  const base = normalizeAuthBase(v);
+  if (shouldIgnoreStaleCachedBase(base)) return null;
+  return base;
 }
 
 function saveLastOkBase(base: string): void {
@@ -92,7 +113,10 @@ function mergeConfig(...parts: (EndpointsConfig | null | undefined)[]): Endpoint
       bases.push(normalizeAuthBase(b));
     }
   }
-  const unique = [...new Set(bases.filter(Boolean))];
+  let unique = [...new Set(bases.filter(Boolean))];
+  if (!useLocalAuthApi()) {
+    unique = unique.filter((b) => !isLocalDevBase(b));
+  }
   const sanitized = unique.filter((b) => !isInsecureApiBase(b));
   const devOnly = unique.filter((b) => isLocalDevBase(b) && !isInsecureApiBase(b));
   const defaults = readBuiltinDefaults();
@@ -100,7 +124,11 @@ function mergeConfig(...parts: (EndpointsConfig | null | undefined)[]): Endpoint
     (b) => !isInsecureApiBase(b),
   );
   const ordered = preferHttpsBases(
-    sanitized.length > 0 ? sanitized : devOnly.length > 0 ? devOnly : defaultBases,
+    sanitized.length > 0
+      ? sanitized
+      : useLocalAuthApi() && devOnly.length > 0
+        ? devOnly
+        : defaultBases,
   );
   return {
     primary: ordered[0] ?? normalizeAuthBase(defaults.primary),
@@ -116,6 +144,29 @@ function isLocalDevBase(url: string): boolean {
     return host === "localhost" || host === "127.0.0.1" || host === "::1";
   } catch {
     return false;
+  }
+}
+
+function shouldIgnoreStaleCachedBase(url: string): boolean {
+  return !useLocalAuthApi() && isLocalDevBase(url);
+}
+
+function purgeStaleEndpointStorage(): void {
+  if (!canUseStorage() || useLocalAuthApi()) return;
+  const cfgRaw = localStorage.getItem(STORAGE_CONFIG_KEY);
+  if (cfgRaw) {
+    try {
+      const p = JSON.parse(cfgRaw) as EndpointsConfig;
+      if (p?.primary && shouldIgnoreStaleCachedBase(normalizeAuthBase(p.primary))) {
+        localStorage.removeItem(STORAGE_CONFIG_KEY);
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_CONFIG_KEY);
+    }
+  }
+  const last = localStorage.getItem(STORAGE_LAST_OK_KEY);
+  if (last && shouldIgnoreStaleCachedBase(normalizeAuthBase(last))) {
+    localStorage.removeItem(STORAGE_LAST_OK_KEY);
   }
 }
 
@@ -329,6 +380,7 @@ export async function initAuthEndpoints(): Promise<void> {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
+    purgeStaleEndpointStorage();
     const merged = mergeConfig(readBuiltinDefaults(), loadStoredConfig());
     endpointsConfig = merged;
     orderedBases = buildOrderedBases(merged);
@@ -348,7 +400,11 @@ export async function initAuthEndpoints(): Promise<void> {
     if (picked) {
       setActiveAuthBase(picked);
     } else {
-      activeBaseUrl = orderedBases[0] ?? normalizeAuthBase(endpointsConfig.primary);
+      const fallbackBases = preferHttpsBases(
+        buildOrderedBases(endpointsConfig).filter((b) => useLocalAuthApi() || !isLocalDevBase(b)),
+      );
+      activeBaseUrl =
+        fallbackBases[0] ?? normalizeAuthBase(readBuiltinDefaults().primary);
       console.warn(
         "[auth-endpoints] 所有线路探测失败，仍使用:",
         activeBaseUrl,

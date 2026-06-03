@@ -149,7 +149,9 @@ const chunkRules: ChunkRule[] = [
 ];
 export default defineConfig({
   root: "src",
-  server: { port: 3333, strictPort: true },
+  /** .env 在项目根目录（与 vite.config 同级），避免 root:src 时读不到 VITE_* */
+  envDir: CONFIG_DIR,
+  server: { port: 3333, strictPort: true, host: "127.0.0.1" },
   plugins: [
     svgr(),
     react(),
